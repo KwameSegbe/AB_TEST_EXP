@@ -4,7 +4,9 @@ sys.path.append('./code')  # Add code folder to path if running from project roo
 from settings_abtest import ALPHA, SRM_ALPHA, EXPERIMENT_NAME, PRETEST_PATH, TEST_PATH
 from utils import load_data, get_observed_counts,summarize_performance,plot_visits_per_day,plot_signup_rate_per_day,get_experiment_parameters
 from utils import get_expected_counts, run_chi_square, run_proportions_ztest,describe_dataset,check_missing_values,calculate_sample_size_and_plot
+from utils import plot_experiment_duration_by_traffic,plot_experiment_duration_by_traffic_absolute
 from settings_abtest import ALPHA, POWER, MDE, P1, P2
+import numpy as np
 # Load data
 pretest = load_data(PRETEST_PATH)
 test = load_data(TEST_PATH)
@@ -40,6 +42,29 @@ print("\n--- Pretest Visits per Day ---")
 # plot_signups_per_rate_day(pretest) 
 print("\n--- Pretest Signups per Day ---")
 # plot_signup_rate_per_day(pretest)
+
+# Plotting experiment duration by traffic.
+print("\n--- Experiment Duration by Traffic ---")
+# n = ttest_power.solve_power(effect_size=cohen_D, power=0.8, alpha=alpha)
+# plot_experiment_duration_by_traffic(n, visits_mean)
+# # 1. Calculate sample size
+n, _ = calculate_sample_size_and_plot(P1, P2, ALPHA, POWER)
+
+# 2. Compute daily average traffic
+visits_mean = pretest.groupby('date')['submitted'].count().mean()
+
+
+# 3. Plot duration estimate
+# visits_per_day = pretest.groupby('date')['submitted'].count()
+# visits_mean = visits_per_day.mean()
+plot_experiment_duration_by_traffic(n, visits_mean)
+
+# plot_experiment_duration_by_traffic(n_required=n, visits_mean=visits_mean)
+
+alloc = np.arange(0.10, 1.1, 0.10)
+size = round(visits_mean, -3) * alloc
+days = np.ceil(2 * n / size)
+plot_experiment_duration_by_traffic_absolute(size, days)
 
 # Run SRM chi-square test
 chi_stats, pvalue = run_chi_square(observed, expected)

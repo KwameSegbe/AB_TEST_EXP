@@ -8,6 +8,7 @@ import seaborn as sns
 import matplotlib.dates as mdates
 from statsmodels.stats.power import TTestIndPower
 import statsmodels.stats.api as sm
+from matplotlib.ticker import MultipleLocator
 
 
 def get_observed_counts(df, group_col='group'):
@@ -132,6 +133,40 @@ def get_experiment_parameters():
     return alpha, power, mde, p1, p2
 
 
+def plot_experiment_duration_by_traffic(n, visits_mean):
+    """
+    Plots experiment duration vs. traffic allocation using a precomputed sample size `n`.
+    Does not trigger power analysis.
+    """
+    alloc = np.arange(0.10, 1.1, 0.10)  # Allocation percentages from 10% to 100%
+    size = round(visits_mean, -3) * alloc  # Daily sample size based on traffic
+    days = np.ceil(2 * n / size)  # Duration to hit total sample size
+
+    # Generate plot
+    fig, ax = plt.subplots(figsize=(6, 4))
+    ax.plot(alloc, days, 'o-')
+
+    ax.xaxis.set_major_locator(MultipleLocator(0.1))
+    ax.set_title('Days Required Given Traffic Allocation per Day')
+    ax.set_ylabel('Experiment Duration in Days')
+    ax.set_xlabel('Traffic Allocated to the Experiment per Day')
+
+    plt.grid(alpha=0.2)
+    plt.show()
+
+    # DURATION PLOT
+    alloc = np.arange(0.10, 1.1, 0.10)
+    size = round(visits_mean, -3) * alloc
+    days = np.ceil(2 * n / size)
+
+    fig, ax = plt.subplots(figsize=(6, 4))
+    ax.plot(alloc, days, 'o-')
+    ax.xaxis.set_major_locator(MultipleLocator(0.1))
+    ax.set_title('Days Required Given Traffic Allocation per Day')
+    ax.set_ylabel('Experiment Duration in Days')
+    ax.set_xlabel('Traffic Allocated to the Experiment per Day')
+    plt.grid(alpha=0.2)
+    plt.show()
 
 # # Sample size calculation and power analysis.
 def calculate_sample_size_and_plot(p1, p2, alpha=0.05, power=0.80):
@@ -162,6 +197,38 @@ def calculate_sample_size_and_plot(p1, p2, alpha=0.05, power=0.80):
     plt.show()
 
     return n, cohen_D
+
+def plot_experiment_duration_by_traffic_absolute(size, days):
+    """
+    Plots experiment duration (in days) given absolute traffic volume allocated per day.
+    """
+    fig, ax = plt.subplots(figsize=(6, 4))
+    ax.plot(size, days, 'o-')
+
+    ax.xaxis.set_major_locator(MultipleLocator(1000))  # X-axis tick every 1000
+
+    ax.set_title('Days Required Given Traffic Allocation per Day')
+    ax.set_ylabel('Experiment Duration in Days')
+    ax.set_xlabel('Traffic Allocated to the Experiment per Day')
+
+    plt.grid(alpha=0.2)
+    plt.show()
+    
+    
+def print_required_users_per_day(n, durations=[21, 14, 7]):
+    """
+    Prints the number of users required per day for a given list of experiment durations.
+    
+    Parameters:
+    - n: required sample size per group
+    - durations: list of experiment durations in days (default: [21, 14, 7])
+    """
+    total_required = n * 2  # Total users needed for both groups
+    print(f"\nTotal sample size required: {total_required}")
+    
+    for d in durations:
+        per_day = int(np.ceil(total_required / d))
+        print(f'For a {d}-day experiment, {per_day} users are required per day.')
 
 
 def run_chi_square(observed, expected):
