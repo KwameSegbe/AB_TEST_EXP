@@ -24,6 +24,7 @@ EXPERIMENT_NAME = 'email_test'
 ALPHA = 0.05  # Significance level
 POWER = 0.80  # Statistical power
 MDE = 0.10    # Minimum detectable effect
+AB_ALPHA = 0.05
 
 # Proportions
 P1 = 0.10

@@ -8,6 +8,7 @@ from utils import plot_experiment_duration_by_traffic,plot_experiment_duration_b
 from utils import plot_daily_signup_rate_by_group
 from settings_abtest import ALPHA, POWER, MDE, P1, P2
 import numpy as np
+import pandas as pd
 # Load data
 pretest = load_data(PRETEST_PATH)
 test = load_data(TEST_PATH)
@@ -115,3 +116,21 @@ from utils import get_ab_group_metrics
 
 # Plotting daily signup rate by group
 plot_daily_signup_rate_by_group(AB_test, AB_control_rate, AB_treatment_rate)
+
+# Step 1: Run Chi-Square test
+from utils import run_ab_chi_square_test
+from settings_abtest import ALPHA
+AB_test['date'] = pd.to_datetime(AB_test['date'])
+run_ab_chi_square_test(
+    AB_test,
+    AB_control_cnt,
+    AB_treatment_cnt,
+    AB_control_size,
+    AB_treatment_size,
+    alpha=ALPHA
+)
+
+
+from utils import run_ab_ttest
+
+run_ab_ttest(AB_test, alpha=ALPHA)

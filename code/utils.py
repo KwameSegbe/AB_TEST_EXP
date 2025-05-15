@@ -9,6 +9,8 @@ import matplotlib.dates as mdates
 from statsmodels.stats.power import TTestIndPower
 import statsmodels.stats.api as sm
 from matplotlib.ticker import MultipleLocator
+from statsmodels.stats.proportion import proportion_effectsize
+from statsmodels.stats.power import TTestIndPower
 
 
 def get_observed_counts(df, group_col='group'):
@@ -174,7 +176,7 @@ def calculate_sample_size_and_plot(p1, p2, alpha=0.05, power=0.80):
     Calculates required sample size per group using Cohen's D and plots power analysis curve.
     """
     # Calculate effect size
-    cohen_D = sm.proportion_effectsize(p1, p2)
+    cohen_D = proportion_effectsize(p1, p2)
 
     # Estimate sample size
     ttest_power = TTestIndPower()
@@ -308,6 +310,99 @@ def plot_daily_signup_rate_by_group(AB_test, AB_control_rate, AB_treatment_rate)
     ax.legend()
     plt.grid(alpha=0.2)
     plt.show()
+    
+from statsmodels.stats.proportion import proportions_chisquare
+
+def run_ab_chi_square_test(AB_test, control_cnt, treatment_cnt, control_size, treatment_size, alpha=0.05):
+    """
+    Runs a chi-square test on control vs. treatment sign-up data.
+    
+    Parameters:
+    - AB_test: filtered dataframe for the experiment
+    - control_cnt: control sign-up count
+    - treatment_cnt: treatment sign-up count
+    - control_size: control sample size
+    - treatment_size: treatment sample size
+    - alpha: significance level (default = 0.05)
+
+    Returns:
+    - (chi_stat, p_value)
+    """
+    # Run chi-square test
+    chi_stat, p_value, _ = proportions_chisquare(
+        [control_cnt, treatment_cnt],
+        nobs=[control_size, treatment_size]
+    )
+
+    # Dates
+    first_date = AB_test['date'].min().strftime('%Y-%m-%d')
+    last_date = AB_test['date'].max().strftime('%Y-%m-%d')
+
+    # Print results
+    print(f'\n--------- AB Test Email Sign-Ups ({first_date} - {last_date}) ---------\n')
+    print('Ho: The sign-up rates between blue and green are the same.')
+    print('Ha: The sign-up rates between blue and green are different.\n')
+    print(f'Significance level: {alpha}\n')
+    print(f'Chi-Square = {chi_stat:.3f} | P-value = {p_value:.3f}')
+
+    print('\nConclusion:')
+    if p_value < alpha:
+        print('Reject Ho and conclude that there is statistical significance in the difference of sign-up rates between blue and green buttons.')
+    else:
+        print('Fail to reject Ho. Therefore, proceed with the AB test.')
+
+    return chi_stat, p_value
+
+
+
+import statsmodels.api as sm
+import pandas as pd
+
+def run_ab_ttest(AB_test, alpha=0.05):
+    """
+    Runs a T-Test for difference in proportions between control and treatment groups.
+    
+    Parameters:
+    - AB_test: DataFrame filtered for a specific experiment, must contain 'group', 'submitted', and 'date'
+    - alpha: significance level (default = 0.05)
+
+    Returns:
+    - t_stat, p_value
+    """
+    # Ensure datetime formatting
+    AB_test['date'] = pd.to_datetime(AB_test['date'], errors='coerce')
+
+    # Subset signups
+    AB_control_signups = AB_test[AB_test.group == 0]['submitted']
+    AB_treatment_signups = AB_test[AB_test.group == 1]['submitted']
+
+    # Run T-test
+    t_stat, p_value, _ = sm.stats.ttest_ind(
+        AB_treatment_signups,
+        AB_control_signups,
+        alternative='two-sided',
+        usevar='pooled'
+    )
+
+    # Date range
+    first_date = AB_test['date'].min().strftime('%Y-%m-%d')
+    last_date = AB_test['date'].max().strftime('%Y-%m-%d')
+
+    # Print summary
+    print(f'\n--------- AB Test Email Sign-Ups ({first_date} - {last_date}) ---------\n')
+    print('Ho: The sign-up rates between blue and green are the same.')
+    print('Ha: The sign-up rates between blue and green are different.\n')
+    print(f'Significance level: {alpha}\n')
+    print(f'T-Statistic = {t_stat:.3f} | P-value = {p_value:.3f}')
+
+    print('\nConclusion:')
+    if p_value < alpha:
+        print('Reject Ho and conclude that there is statistical significance in the difference of sign-up rates between blue and green buttons.')
+    else:
+        print('Fail to reject Ho.')
+
+    return t_stat, p_value 
+
 
 
 def run_chi_square(observed, expected):
