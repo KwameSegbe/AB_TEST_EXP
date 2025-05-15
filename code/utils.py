@@ -229,6 +229,85 @@ def print_required_users_per_day(n, durations=[21, 14, 7]):
     for d in durations:
         per_day = int(np.ceil(total_required / d))
         print(f'For a {d}-day experiment, {per_day} users are required per day.')
+        
+        
+
+def get_ab_group_metrics(test_df, experiment_name='email_test'):
+    """
+    Filters the test dataset for a given experiment and computes control/treatment sign-up stats.
+
+    Returns:
+        - AB_test: filtered DataFrame
+        - AB_control_cnt
+        - AB_treatment_cnt
+        - AB_control_rate
+        - AB_treatment_rate
+        - AB_control_size
+        - AB_treatment_size
+    """
+    # Filter experiment
+    AB_test = test_df[test_df.experiment == experiment_name]
+
+    # Split groups
+    control_signups = AB_test[AB_test.group == 0]['submitted']
+    treatment_signups = AB_test[AB_test.group == 1]['submitted']
+
+    # Compute stats
+    AB_control_cnt = control_signups.sum()
+    AB_treatment_cnt = treatment_signups.sum()
+    AB_control_rate = control_signups.mean()
+    AB_treatment_rate = treatment_signups.mean()
+    AB_control_size = control_signups.count()
+    AB_treatment_size = treatment_signups.count()
+
+    # Print summary
+    print(f'Control Sign-Up Rate: {AB_control_rate:.4f}')
+    print(f'Treatment Sign-Up Rate: {AB_treatment_rate:.4f}')
+
+    return (
+        AB_test,
+        AB_control_cnt,
+        AB_treatment_cnt,
+        AB_control_rate,
+        AB_treatment_rate,
+        AB_control_size,
+        AB_treatment_size
+    )
+    
+    
+import matplotlib.pyplot as plt
+
+def plot_daily_signup_rate_by_group(AB_test, AB_control_rate, AB_treatment_rate):
+    """
+    Plots daily sign-up rates for control and treatment groups during the experiment.
+
+    Parameters:
+    - AB_test: DataFrame filtered for a specific experiment
+    - AB_control_rate: global average sign-up rate for control group
+    - AB_treatment_rate: global average sign-up rate for treatment group
+    """
+    # Calculate daily signup rate
+    signup_per_day = AB_test.groupby(['group', 'date'])['submitted'].mean()
+    ctrl_props = signup_per_day.loc[0]
+    trt_props = signup_per_day.loc[1]
+
+    # Day range for x-axis
+    exp_days = range(1, AB_test['date'].nunique() + 1)
+
+    # Plot
+    f, ax = plt.subplots(figsize=(10, 6))
+    ax.plot(exp_days, ctrl_props, label='Control', color='b')
+    ax.plot(exp_days, trt_props, label='Treatment', color='g')
+    ax.axhline(AB_control_rate, label='Global Control Prop.', linestyle='--', color='b')
+    ax.axhline(AB_treatment_rate, label='Global Treatment Prop.', linestyle='--', color='g')
+
+    ax.set_xticks(exp_days)
+    ax.set_title('Email Sign Up Rates Across a 14-Day Experiment')
+    ax.set_ylabel('Sign-up Rate (Proportion)')
+    ax.set_xlabel('Days in the Experiment')
+    ax.legend()
+    plt.grid(alpha=0.2)
+    plt.show()
 
 
 def run_chi_square(observed, expected):

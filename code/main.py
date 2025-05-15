@@ -5,6 +5,7 @@ from settings_abtest import ALPHA, SRM_ALPHA, EXPERIMENT_NAME, PRETEST_PATH, TES
 from utils import load_data, get_observed_counts,summarize_performance,plot_visits_per_day,plot_signup_rate_per_day,get_experiment_parameters
 from utils import get_expected_counts, run_chi_square, run_proportions_ztest,describe_dataset,check_missing_values,calculate_sample_size_and_plot
 from utils import plot_experiment_duration_by_traffic,plot_experiment_duration_by_traffic_absolute
+from utils import plot_daily_signup_rate_by_group
 from settings_abtest import ALPHA, POWER, MDE, P1, P2
 import numpy as np
 # Load data
@@ -59,8 +60,7 @@ visits_mean = pretest.groupby('date')['submitted'].count().mean()
 # visits_mean = visits_per_day.mean()
 plot_experiment_duration_by_traffic(n, visits_mean)
 
-# plot_experiment_duration_by_traffic(n_required=n, visits_mean=visits_mean)
-
+# 4. Plot duration estimate with absolute traffic
 alloc = np.arange(0.10, 1.1, 0.10)
 size = round(visits_mean, -3) * alloc
 days = np.ceil(2 * n / size)
@@ -100,3 +100,18 @@ alpha, power, mde, p1, p2 = get_experiment_parameters()
 print("\n--- Sample Size Calculation ---")
 calculate_sample_size_and_plot(p1=P1, p2=P2, alpha=ALPHA, power=POWER)
 
+from utils import get_ab_group_metrics
+
+(
+    AB_test,
+    AB_control_cnt,
+    AB_treatment_cnt,
+    AB_control_rate,
+    AB_treatment_rate,
+    AB_control_size,
+    AB_treatment_size
+) = get_ab_group_metrics(test)
+
+
+# Plotting daily signup rate by group
+plot_daily_signup_rate_by_group(AB_test, AB_control_rate, AB_treatment_rate)
