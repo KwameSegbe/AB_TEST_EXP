@@ -1,16 +1,18 @@
 # code/utils.py
 
 import numpy as np
+import pandas as pd
 from scipy.stats import chisquare
-from statsmodels.stats.proportion import proportions_ztest
+from statsmodels.stats.proportion import proportions_ztest,proportion_effectsize,proportions_chisquare,proportions_chisquare
 import matplotlib.pyplot as plt
 import seaborn as sns
 import matplotlib.dates as mdates
 from statsmodels.stats.power import TTestIndPower
 import statsmodels.stats.api as sm
 from matplotlib.ticker import MultipleLocator
-from statsmodels.stats.proportion import proportion_effectsize
-from statsmodels.stats.power import TTestIndPower
+import statsmodels.api as sm
+
+
 
 
 def get_observed_counts(df, group_col='group'):
@@ -85,6 +87,7 @@ def plot_visits_per_day(df):
     plt.xlabel('Date', fontsize=10)
     plt.legend()
     plt.show()
+
 
 # Plotting function for signup rate per day
 def plot_signup_rate_per_day(df):
@@ -170,6 +173,7 @@ def plot_experiment_duration_by_traffic(n, visits_mean):
     plt.grid(alpha=0.2)
     plt.show()
 
+
 # # Sample size calculation and power analysis.
 def calculate_sample_size_and_plot(p1, p2, alpha=0.05, power=0.80):
     """
@@ -199,6 +203,7 @@ def calculate_sample_size_and_plot(p1, p2, alpha=0.05, power=0.80):
     plt.show()
 
     return n, cohen_D
+
 
 def plot_experiment_duration_by_traffic_absolute(size, days):
     """
@@ -277,8 +282,8 @@ def get_ab_group_metrics(test_df, experiment_name='email_test'):
     )
     
     
-import matplotlib.pyplot as plt
 
+# Plotting function for daily signup rates
 def plot_daily_signup_rate_by_group(AB_test, AB_control_rate, AB_treatment_rate):
     """
     Plots daily sign-up rates for control and treatment groups during the experiment.
@@ -311,7 +316,133 @@ def plot_daily_signup_rate_by_group(AB_test, AB_control_rate, AB_treatment_rate)
     plt.grid(alpha=0.2)
     plt.show()
     
-from statsmodels.stats.proportion import proportions_chisquare
+    
+# Function to summarize AA test results 
+# This function filters the pretest data for the AA test and computes control/treatment sign-up stats.
+def summarize_aa_test(pretest_df, experiment_name='AA_test'):
+    """
+    Filters and summarizes control and treatment group metrics for an AA test.
+
+    Parameters:
+    - pretest_df: DataFrame containing pretest experiment data
+    - experiment_name: string name of the AA experiment (default: 'AA_test')
+
+    Returns:
+    - AA_test: filtered dataframe
+    - AA_control_cnt, AA_treatment_cnt
+    - AA_control_rate, AA_treatment_rate
+    - AA_control_size, AA_treatment_size
+    """
+    # Filter AA test
+    AA_test = pretest_df[pretest_df.experiment == experiment_name]
+
+    # Control and Treatment groups
+    AA_control = AA_test[AA_test.group == 0]['submitted']
+    AA_treatment = AA_test[AA_test.group == 1]['submitted']
+
+    # Compute stats
+    AA_control_cnt = AA_control.sum()
+    AA_treatment_cnt = AA_treatment.sum()
+    AA_control_rate = AA_control.mean()
+    AA_treatment_rate = AA_treatment.mean()
+    AA_control_size = AA_control.count()
+    AA_treatment_size = AA_treatment.count()
+
+    # Print output
+    print('\n-------- AA Test ----------')
+    print(f'Control Sign-Up Rate: {AA_control_rate:.3f}')
+    print(f'Treatment Sign-Up Rate: {AA_treatment_rate:.3f}')
+
+    return (
+        AA_test,
+        AA_control_cnt,
+        AA_treatment_cnt,
+        AA_control_rate,
+        AA_treatment_rate,
+        AA_control_size,
+        AA_treatment_size
+    )
+    
+
+import matplotlib.pyplot as plt
+
+def plot_aa_signup_rate_by_day(AA_test, AA_control_rate, AA_treatment_rate):
+    """
+    Plots daily sign-up rates for control and treatment groups in an AA test.
+
+    Parameters:
+    - AA_test: DataFrame filtered to the AA experiment (must include 'group', 'date', 'submitted')
+    - AA_control_rate: overall control conversion rate (for horizontal reference line)
+    - AA_treatment_rate: overall treatment conversion rate
+    """
+
+    # Daily sign-up rates by group and date
+    AA_signup_per_day = AA_test.groupby(['group', 'date'])['submitted'].mean()
+    AA_ctrl_props = AA_signup_per_day.loc[0]
+    AA_trt_props = AA_signup_per_day.loc[1]
+
+    # Range of days
+    exp_days = range(1, AA_test['date'].nunique() + 1)
+
+    # Plot
+    f, ax = plt.subplots(figsize=(10, 6))
+    ax.plot(exp_days, AA_ctrl_props, label='Control', color='b')
+    ax.plot(exp_days, AA_trt_props, label='Treatment', color='g')
+    ax.axhline(AA_control_rate, label='Global Control Prop.', linestyle='--', color='b')
+    ax.axhline(AA_treatment_rate, label='Global Treatment Prop.', linestyle='--', color='g')
+
+    ax.set_xticks(exp_days)
+    ax.set_title('AA Test')
+    ax.set_ylabel('Sign-up Rate (Proportion)')
+    ax.set_xlabel('Days in the Experiment')
+    ax.legend()
+    plt.grid(alpha=0.1)
+    plt.show()
+    
+
+
+def run_aa_chi_square_test(AA_test, control_cnt, treatment_cnt, control_size, treatment_size, alpha=0.05):
+    """
+    Runs a chi-square test to validate no underlying difference in AA test groups.
+
+    Parameters:
+    - AA_test: DataFrame filtered for 'AA_test'
+    - control_cnt: control sign-up count
+    - treatment_cnt: treatment sign-up count
+    - control_size: control sample size
+    - treatment_size: treatment sample size
+    - alpha: significance level (default = 0.05)
+
+    Returns:
+    - chi_stat, p_value
+    """
+
+    # Ensure date column is datetime for formatting
+    AA_test['date'] = pd.to_datetime(AA_test['date'], errors='coerce')
+    first_date = AA_test['date'].min().strftime('%Y-%m-%d')
+    last_date = AA_test['date'].max().strftime('%Y-%m-%d')
+
+    # Run chi-square test
+    chi_stat, p_value, _ = proportions_chisquare(
+        [control_cnt, treatment_cnt],
+        nobs=[control_size, treatment_size]
+    )
+
+    # Print results
+    print(f'\n--------- AA Test ({first_date} - {last_date}) ----------\n')
+    print('Ho: The sign-up rates between blue and green are the same.')
+    print('Ha: The sign-up rates between blue and green are different.\n')
+    print(f'Significance level: {alpha}\n')
+    print(f'Chi-Square = {chi_stat:.3f} | P-value = {p_value:.3f}')
+
+    print('\nConclusion:')
+    if p_value < alpha:
+        print('Reject Ho and conclude that there is statistical significance in the difference between the two groups. Check for instrumentation errors.')
+    else:
+        print('Fail to reject Ho. Therefore, proceed with the AB test.')
+
+    return chi_stat, p_value
+
 
 def run_ab_chi_square_test(AB_test, control_cnt, treatment_cnt, control_size, treatment_size, alpha=0.05):
     """
@@ -354,9 +485,6 @@ def run_ab_chi_square_test(AB_test, control_cnt, treatment_cnt, control_size, tr
     return chi_stat, p_value
 
 
-
-import statsmodels.api as sm
-import pandas as pd
 
 def run_ab_ttest(AB_test, alpha=0.05):
     """

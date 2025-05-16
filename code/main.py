@@ -5,7 +5,7 @@ from settings_abtest import ALPHA, SRM_ALPHA, EXPERIMENT_NAME, PRETEST_PATH, TES
 from utils import load_data, get_observed_counts,summarize_performance,plot_visits_per_day,plot_signup_rate_per_day,get_experiment_parameters
 from utils import get_expected_counts, run_chi_square, run_proportions_ztest,describe_dataset,check_missing_values,calculate_sample_size_and_plot
 from utils import plot_experiment_duration_by_traffic,plot_experiment_duration_by_traffic_absolute
-from utils import plot_daily_signup_rate_by_group
+from utils import plot_daily_signup_rate_by_group,plot_aa_signup_rate_by_day
 from settings_abtest import ALPHA, POWER, MDE, P1, P2
 import numpy as np
 import pandas as pd
@@ -37,13 +37,16 @@ check_missing_values(test)
 print("\n--- Pretest Performance Summary ---")
 summarize_performance(pretest)
 
+
 # Plot_visits_per_day(pretest)
 print("\n--- Pretest Visits per Day ---")
 # plot_visits_per_day(pretest)
 
+
 # plot_signups_per_rate_day(pretest) 
 print("\n--- Pretest Signups per Day ---")
 # plot_signup_rate_per_day(pretest)
+
 
 # Plotting experiment duration by traffic.
 print("\n--- Experiment Duration by Traffic ---")
@@ -51,6 +54,7 @@ print("\n--- Experiment Duration by Traffic ---")
 # plot_experiment_duration_by_traffic(n, visits_mean)
 # # 1. Calculate sample size
 n, _ = calculate_sample_size_and_plot(P1, P2, ALPHA, POWER)
+
 
 # 2. Compute daily average traffic
 visits_mean = pretest.groupby('date')['submitted'].count().mean()
@@ -66,6 +70,24 @@ alloc = np.arange(0.10, 1.1, 0.10)
 size = round(visits_mean, -3) * alloc
 days = np.ceil(2 * n / size)
 plot_experiment_duration_by_traffic_absolute(size, days)
+
+from utils import summarize_aa_test
+
+(
+    AA_test,
+    AA_control_cnt,
+    AA_treatment_cnt,
+    AA_control_rate,
+    AA_treatment_rate,
+    AA_control_size,
+    AA_treatment_size
+) = summarize_aa_test(pretest)
+
+
+
+# Plotting daily signup rate by group
+print("\n--- Daily Signup Rate by Group ---")
+plot_aa_signup_rate_by_day(AA_test, AA_control_rate, AA_treatment_rate)
 
 # Run SRM chi-square test
 chi_stats, pvalue = run_chi_square(observed, expected)
