@@ -5,10 +5,12 @@ from settings_abtest import ALPHA, SRM_ALPHA, EXPERIMENT_NAME, PRETEST_PATH, TES
 from utils import load_data, get_observed_counts,summarize_performance,plot_visits_per_day,plot_signup_rate_per_day,get_experiment_parameters
 from utils import get_expected_counts, run_chi_square, run_proportions_ztest,describe_dataset,check_missing_values,calculate_sample_size_and_plot
 from utils import plot_experiment_duration_by_traffic,plot_experiment_duration_by_traffic_absolute
-from utils import plot_daily_signup_rate_by_group,plot_aa_signup_rate_by_day
+from utils import plot_daily_signup_rate_by_group,plot_aa_signup_rate_by_day,run_aa_chi_square_test
 from settings_abtest import ALPHA, POWER, MDE, P1, P2
 import numpy as np
 import pandas as pd
+
+
 # Load data
 pretest = load_data(PRETEST_PATH)
 test = load_data(TEST_PATH)
@@ -88,6 +90,17 @@ from utils import summarize_aa_test
 # Plotting daily signup rate by group
 print("\n--- Daily Signup Rate by Group ---")
 plot_aa_signup_rate_by_day(AA_test, AA_control_rate, AA_treatment_rate)
+
+# Step 1: Run Chi-Square test for AA_test
+run_aa_chi_square_test(
+    AA_test,
+    AA_control_cnt,
+    AA_treatment_cnt,
+    AA_control_size,
+    AA_treatment_size,
+    alpha=0.05  # Or set to AA_ALPHA if you define one in settings
+)
+
 
 # Run SRM chi-square test
 chi_stats, pvalue = run_chi_square(observed, expected)

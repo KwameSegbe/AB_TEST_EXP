@@ -444,6 +444,50 @@ def run_aa_chi_square_test(AA_test, control_cnt, treatment_cnt, control_size, tr
     return chi_stat, p_value
 
 
+# from statsmodels.stats.proportion import proportions_chisquare
+# from statsmodels.stats.proportion import proportions_ztest, proportion_effectsize
+def check_sample_ratio_mismatch(test_df, experiment_name='email_test', alpha=0.05):
+    """
+    Performs a chi-square goodness of fit test to check for Sample Ratio Mismatch (SRM).
+
+    Parameters:
+    - test_df: full DataFrame containing experiment logs
+    - experiment_name: experiment to check (default: 'email_test')
+    - alpha: significance level (default = 0.05)
+
+    Returns:
+    - chi_stat, p_value
+    """
+
+    # Filter experiment
+    email_test = test_df[test_df.experiment == experiment_name]
+
+    # Ensure valid data
+    email_test['group'] = pd.to_numeric(email_test['group'], errors='coerce')
+
+    # Observed and expected sample sizes
+    observed = email_test.groupby('group')['experiment'].count().values
+    expected = [email_test.shape[0] * 0.5] * 2  # 50/50 split
+
+    # Run test
+    chi_stat, p_value = chisquare(f_obs=observed, f_exp=expected)
+
+    # Output
+    print('\n------ A Chi-Square Test for SRM ------\n')
+    print('Ho: The ratio of samples is 1:1.')
+    print('Ha: The ratio of samples is not 1:1.\n')
+    print(f'Significance level: {alpha}\n')
+    print(f'Chi-Square = {chi_stat:.3f} | P-value = {p_value:.3f}')
+
+    print('\nConclusion:')
+    if p_value < alpha:
+        print('Reject Ho and conclude that there is statistical significance in the ratio of samples not being 1:1. Therefore, there is SRM.')
+    else:
+        print('Fail to reject Ho. Therefore, there is no SRM.')
+
+    return chi_stat, p_value
+
+
 def run_ab_chi_square_test(AB_test, control_cnt, treatment_cnt, control_size, treatment_size, alpha=0.05):
     """
     Runs a chi-square test on control vs. treatment sign-up data.
